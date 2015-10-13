@@ -4,6 +4,7 @@ import pymongo
 import sys
 import os
 import daemon
+import local_settings as settings
 
 def save_to_mongo(data, mongo_db, mongo_db_coll, **mongo_conn_kw):
     client = pymongo.MongoClient(**mongo_conn_kw)
@@ -13,8 +14,8 @@ def save_to_mongo(data, mongo_db, mongo_db_coll, **mongo_conn_kw):
 
 def get_tweets():
 
-  CONSUMER_KEY = 'xoQ9g9S483vlnpTepmy5dMb10'
-  CONSUMER_SECRET = 'oFN3sj5fNVkRxmjpJuPV5ZIzor62usdJLwaYP813ClJrrbLiPD'
+  CONSUMER_KEY = settings.CONSUMER_KEY
+  CONSUMER_SECRET = settings.CONSUMER_SECRET
 
   lang='en'
   locations='112.2,-44.5,154.9,-8.0'
