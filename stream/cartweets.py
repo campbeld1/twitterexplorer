@@ -1,0 +1,43 @@
+from twitter import *
+import json
+import pymongo
+import sys
+import os
+import daemon
+
+def save_to_mongo(data, mongo_db, mongo_db_coll, **mongo_conn_kw):
+    client = pymongo.MongoClient(**mongo_conn_kw)
+    db = client[mongo_db]
+    coll = db[mongo_db_coll]
+    return coll.insert(data)
+
+def get_tweets():
+
+  CONSUMER_KEY = 'xoQ9g9S483vlnpTepmy5dMb10'
+  CONSUMER_SECRET = 'oFN3sj5fNVkRxmjpJuPV5ZIzor62usdJLwaYP813ClJrrbLiPD'
+
+  lang='en'
+  locations='112.2,-44.5,154.9,-8.0'
+
+  if not os.path.exists("/root/tokens"):
+    oauth_dance("DCWDMyTestApp", CONSUMER_KEY, CONSUMER_SECRET,"/root/tokens")
+
+  oauth_token, oauth_secret = read_token_file("/root/tokens")
+
+  auth=OAuth(oauth_token, oauth_secret, CONSUMER_KEY, CONSUMER_SECRET)
+
+  twitter_stream = TwitterStream(auth=auth)
+  stream = twitter_stream.statuses.filter(locations=locations,language=lang)
+  for tweet in stream:
+    save_to_mongo(tweet, 'twitter', 'stream')
+
+def daemonize():
+  context = daemon.DaemonContext()
+  context.open()
+  with context:
+    get_tweets()
+
+def main():
+  daemonize()
+
+if __name__ == "__main__": main()
