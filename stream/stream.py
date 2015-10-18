@@ -3,7 +3,6 @@ import json
 import pymongo
 import sys
 import os
-import daemon
 from prettytable import PrettyTable
 from collections import Counter
 import local_settings as settings
@@ -34,15 +33,8 @@ def get_tweets():
   for tweet in stream:
     save_to_mongo(tweet, 'twitter', 'stream')
 
-def daemonize():
-  context = daemon.DaemonContext()
-  context.open()
-  with context:
-    get_tweets()
-
 def main():
-  daemonize()
+  get_tweets()
 
 if __name__ == "__main__": 
-   
   main()
