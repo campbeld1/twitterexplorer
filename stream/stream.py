@@ -3,6 +3,7 @@ import json
 import pymongo
 import sys
 import os
+import datetime
 from prettytable import PrettyTable
 from collections import Counter
 import local_settings as settings
@@ -31,6 +32,9 @@ def get_tweets():
   twitter_stream = TwitterStream(auth=auth)
   stream = twitter_stream.statuses.filter(locations=locations,language=lang)
   for tweet in stream:
+    thedate = tweet['created_at']
+    proper_date = datetime.datetime.strptime(thedate,'%a %b %d %H:%M:%S +0000 %Y')
+    tweet['created_at_date'] = proper_date
     save_to_mongo(tweet, 'twitter', 'stream')
 
 def main():
