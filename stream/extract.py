@@ -9,10 +9,13 @@ import nltk
 import pickle
 from senti_classifier import senti_classifier
 from nltk.corpus import sentiwordnet as swn
+from nltk.tokenize import TweetTokenizer
 from prettytable import PrettyTable
 from prettytable import MSWORD_FRIENDLY
 from collections import Counter
 from string import punctuation
+from collections import defaultdict
+from collections import Counter
 
 def get_positive_words():
    return ['good', 'nice', 'super', 'fun', 'delightful', 'like']
@@ -56,7 +59,7 @@ def get_coll(mongo_db, mongo_db_coll, **mongo_conn_kw):
 def prepare_dates():
     coll = get_coll('twitter','stream')
     tweets = coll.find({ 'created_at_date': { '$exists': False }})
-    print(tweets.count())
+    #print(tweets.count())
     for tweet in tweets:
       if 'created_at' in tweet:
         thedate = tweet['created_at']
@@ -75,6 +78,50 @@ def get_extract():
     ]
     tweets = coll.aggregate( pipeline )
     return tweets
+
+def get_all_tweets():
+    coll = get_coll('twitter','stream')
+    pipeline = [
+    ]
+    tweets = coll.find()
+    return tweets
+
+def count_tweets_keywords(tweets):
+    tknzr = TweetTokenizer()
+    wordcounts = defaultdict(int)
+    for tweet in tweets:
+      if 'text' in tweet:
+        words = tknzr.tokenize(tweet['text']) 
+        for word in words:
+          wordcounts[word] += 1
+    return wordcounts
+  
+def count_hash_tags(tweets):
+    hashcounts = defaultdict(int)
+    for tweet in tweets:
+     if 'entities' in tweet:
+       if 'hashtags' in tweet['entities']:
+         for hashtag in tweet['entities']['hashtags']:
+           hashcounts[hashtag['text']] += 1
+    return hashcounts
+
+def dump_hashcounts():
+   tweets = get_all_tweets()
+   print(tweets.count())
+   hashcounts = count_hash_tags(tweets)
+   hashlist = list(hashcounts.items())
+   hashlist.sort(key=lambda hashtag: hashtag[1])
+   print(hashlist[-100:])
+
+def dump_wordcounts():
+   tweets = get_all_tweets()
+   print(tweets.count())
+   wordcounts = count_tweets_keywords(tweets)
+   wordlist = list(wordcounts.items())
+   wordlist.sort(key=lambda word: word[1])
+   print(wordlist[-100:])
+   print(wordlist[:100])
+            
 
 def print_extract(tweets):
     x = PrettyTable(["Date", "Pos", "Neg", "Sentiment", "Text"]) 
@@ -113,7 +160,9 @@ def daemonize():
     dump_tweets()
 
 def main():
-  prepare_dates()
-  dump_tweets()
+#  prepare_dates()
+#  dump_hashcounts()
+  dump_wordcounts()
+#  dump_tweets()
 
 if __name__ == "__main__": main()
