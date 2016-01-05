@@ -8,8 +8,10 @@ import daemon
 import nltk
 import pickle
 from senti_classifier import senti_classifier
+from spacy.en import English, LOCAL_DATA_DIR
 from nltk.corpus import sentiwordnet as swn
 from nltk.tokenize import TweetTokenizer
+from nltk.corpus import stopwords
 from prettytable import PrettyTable
 from prettytable import MSWORD_FRIENDLY
 from collections import Counter
@@ -68,22 +70,16 @@ def prepare_dates():
         coll.update({'_id': pointer}, {'$set': {'created_at_date': proper_date}})
    
 
-def get_extract():
+def get_recent_tweets(x=10):
     coll = get_coll('twitter','stream')
-    d = datetime.datetime(2015, 10, 8, 8, 40)
-    pipeline = [
-         { "$sort": { "created_at_date": -1 } },
-	 { "$match": { "$and": [ { "created_at_date": { "$exists": "true" } }, { "created_at_date": {"$gt":d} }]}},
-	 { "$limit": 10 }
-    ]
-    tweets = coll.aggregate( pipeline )
+    tweets = list(coll.find().sort('created_at_date', -1).limit(x))
     return tweets
 
 def get_all_tweets():
     coll = get_coll('twitter','stream')
     pipeline = [
     ]
-    tweets = coll.find()
+    tweets = list(coll.find())
     return tweets
 
 def count_tweets_keywords(tweets):
@@ -91,10 +87,27 @@ def count_tweets_keywords(tweets):
     wordcounts = defaultdict(int)
     for tweet in tweets:
       if 'text' in tweet:
-        words = tknzr.tokenize(tweet['text']) 
-        for word in words:
+        word_list = tknzr.tokenize(tweet['text']) 
+        filtered_words = [word for word in word_list if word not in stopwords.words('english')]
+        for word in filtered_words:
           wordcounts[word] += 1
     return wordcounts
+
+def count_tweets_nouns(tweets):
+  nlp = English()
+  nouncounts = defaultdict(int)
+  counter = 0
+  
+  for tweet in tweets:
+    counter += 1
+    print(str(counter) + '/' + str(len(tweets)))
+    if 'text' in tweet:
+      tweet_parse = nlp(tweet['text'])
+      for chunk in tweet_parse.noun_chunks:
+        print(chunk.text)
+        nouncounts[chunk.text] += 1
+  return nouncounts
+          
   
 def count_hash_tags(tweets):
     hashcounts = defaultdict(int)
@@ -114,13 +127,20 @@ def dump_hashcounts():
    print(hashlist[-100:])
 
 def dump_wordcounts():
-   tweets = get_all_tweets()
-   print(tweets.count())
+   tweets = get_recent_tweets(10000)
+   print(len(tweets))
    wordcounts = count_tweets_keywords(tweets)
    wordlist = list(wordcounts.items())
    wordlist.sort(key=lambda word: word[1])
+   print(wordlist[-300:])
+
+def dump_nouncounts():
+   tweets = get_recent_tweets(10000)
+   print(len(tweets))
+   wordcounts = count_tweets_nouns(tweets)
+   wordlist = list(wordcounts.items())
+   wordlist.sort(key=lambda word: word[1])
    print(wordlist[-100:])
-   print(wordlist[:100])
             
 
 def print_extract(tweets):
@@ -160,9 +180,11 @@ def daemonize():
     dump_tweets()
 
 def main():
-#  prepare_dates()
-#  dump_hashcounts()
-  dump_wordcounts()
-#  dump_tweets()
+# prepare_dates()
+# dump_hashcounts()
+# dump_wordcounts()
+  dump_nouncounts()
+# dump_tweets()
+  sys.exit()  
 
 if __name__ == "__main__": main()
